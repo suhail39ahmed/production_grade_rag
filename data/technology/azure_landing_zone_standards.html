@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Azure Landing Zone Standards - TECH-AZ-001</title>
+<meta name="doc_id" content="TECH-AZ-001">
+<meta name="version" content="2.0">
+<meta name="effective_date" content="2026-01-15">
+</head>
+<body>
+<p><strong>FICTIONAL SAMPLE DATA - for RAG testing only</strong></p>
+<h1>Azure Landing Zone Standards</h1>
+<table>
+  <tr><th>Title</th><td>Azure Landing Zone Standards</td></tr>
+  <tr><th>Doc ID</th><td>TECH-AZ-001</td></tr>
+  <tr><th>Version</th><td>2.0</td></tr>
+  <tr><th>Effective date</th><td>2026-01-15</td></tr>
+  <tr><th>Owner</th><td>Cloud Platform Team, Lumenvale Technologies Inc.</td></tr>
+  <tr><th>Status</th><td>Current</td></tr>
+</table>
+
+<h2>1. Purpose</h2>
+<p>These standards define how Azure subscriptions, networks and resources are organized and governed at Lumenvale Technologies Inc. They are enforced through Azure Policy assignments at the management group level. Exceptions require approval from the Cloud Architecture Board.</p>
+
+<h2>2. Management Group Hierarchy</h2>
+<pre>
+mg-lumenvale (root)
+├── mg-platform
+│   ├── mg-connectivity   (hub networking, firewall, DNS)
+│   ├── mg-identity       (domain services, identity tooling)
+│   └── mg-management     (Log Analytics, automation, monitoring)
+├── mg-landingzones
+│   ├── corp              (internal workloads, private connectivity only)
+│   └── online            (internet-facing workloads)
+├── mg-sandbox            (experimentation, no connectivity to corp)
+└── mg-decommissioned     (subscriptions pending deletion)
+</pre>
+
+<h2>3. Allowed Regions</h2>
+<p>Resources may be deployed only in <strong>eastus2</strong> (primary), <strong>centralus</strong> (disaster recovery) and <strong>westeurope</strong> (EU customer data). Deployment to any other region is denied by policy.</p>
+
+<h2>4. Naming Convention</h2>
+<p>Resource names follow the pattern <code>&lt;resource-type&gt;-&lt;workload&gt;-&lt;env&gt;-&lt;region&gt;-&lt;instance&gt;</code>, using these abbreviations:</p>
+<table>
+  <tr><th>Element</th><th>Values</th></tr>
+  <tr><td>Resource type</td><td>rg (resource group), vnet, snet, kv (Key Vault), dbw (Databricks workspace), st (storage), afw (firewall)</td></tr>
+  <tr><td>Environment</td><td>dev, test, prod, dr</td></tr>
+  <tr><td>Region</td><td>eus2, cus, weu</td></tr>
+  <tr><td>Instance</td><td>Three digits, e.g. 001</td></tr>
+</table>
+<p>Example: <code>rg-dataplat-prod-eus2-001</code>. Storage accounts cannot contain hyphens and are limited to 24 characters, so the hyphens are omitted (for example <code>stlvlakeprodeus2</code>).</p>
+
+<h2>5. Mandatory Tags</h2>
+<p>Every resource group and resource must carry these tags; deployments without them are denied:</p>
+<ul>
+  <li><code>owner</code> — email of the accountable team</li>
+  <li><code>cost-center</code> — finance cost center code</li>
+  <li><code>env</code> — dev, test, prod or dr</li>
+  <li><code>data-classification</code> — public, internal, confidential or restricted</li>
+</ul>
+
+<h2>6. Networking</h2>
+<ul>
+  <li>Hub-and-spoke topology. The hub VNet in each region uses <strong>10.0.0.0/16</strong> (eastus2) and 10.1.0.0/16 (centralus).</li>
+  <li>Spoke VNets are allocated as <strong>/20</strong> blocks from the <strong>10.64.0.0/10</strong> range by the Cloud Platform Team through the IP address management tool.</li>
+  <li>All egress to the internet passes through <strong>Azure Firewall Premium</strong> in the hub.</li>
+  <li>Public IP addresses on network interfaces are denied by policy in the corp landing zone.</li>
+  <li><strong>Private endpoints are mandatory</strong> for Storage, Key Vault, Azure SQL, Databricks and Event Hubs. Public network access must be disabled on these services.</li>
+</ul>
+
+<h2>7. Security Baseline</h2>
+<ul>
+  <li>Microsoft Defender for Cloud is enabled on all subscriptions.</li>
+  <li>Diagnostic logs from all resources are sent to the central Log Analytics workspace <code>log-platform-prod-eus2-001</code>.</li>
+  <li>Owner role assignments at subscription scope are limited to the Cloud Platform Team; workload teams receive Contributor through Privileged Identity Management with a maximum activation of 8 hours.</li>
+</ul>
+
+<h2>8. Cost Management</h2>
+<p>Each subscription has a monthly budget with alerts at <strong>80%, 100% and 120%</strong> of the budget, sent to the <code>owner</code> tag address and to FinOps.</p>
+
+<h2>9. Sandbox Subscriptions</h2>
+<p>Sandbox subscriptions have a spending cap of USD 500 per month and are <strong>automatically deleted 90 days after creation</strong> unless the owner requests a single 30-day extension.</p>
+</body>
+</html>

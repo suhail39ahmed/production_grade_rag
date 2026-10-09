@@ -1,0 +1,52 @@
+FICTIONAL SAMPLE DATA - for RAG testing only
+==============================================================
+Title:          Halvorsen Ridge Sustainable Infrastructure Fund - Fund Factsheet
+Doc ID:         INV-FS-HRSI
+Version:        1.3
+Effective date: 2026-07-15 (data as of 2026-06-30)
+Owner:          Product Management, Halvorsen Ridge Capital Management LLC
+Status:         Current
+==============================================================
+
+FUND OVERVIEW
+The Halvorsen Ridge Sustainable Infrastructure Fund invests in listed
+companies that own or operate essential infrastructure assets that support
+the energy transition: renewable generation, electricity transmission,
+water utilities, digital infrastructure and low-carbon transport.
+
+KEY FACTS
+  Fund codes ............. HRSI-A (Class A), HRSI-I (Institutional Class)
+  Inception date ......... 3 September 2019
+  Fund AUM ............... USD 642 million (as of 30 June 2026)
+  Benchmark .............. S&P Global Infrastructure Index (Net, USD)
+  Portfolio manager ...... Amara Lindqvist
+  Number of holdings ..... 46
+  Dividend yield ......... 3.4%
+  Dealing frequency ...... Daily
+
+SHARE CLASSES AND COSTS
+  Class          Code     TER     Minimum initial investment
+  Class A        HRSI-A   0.79%   USD 2,500
+  Institutional  HRSI-I   0.64%   USD 1,000,000
+
+FUND-SPECIFIC ESG EXCLUSIONS
+This fund applies stricter exclusions than the firm-wide ESG Policy
+(INV-ESG-001). In particular, the fund excludes any company deriving more
+than 5% of revenue from thermal coal mining or coal-fired power generation.
+The fund also targets a weighted average carbon intensity at least 30%
+below that of its benchmark.
+
+SUB-SECTOR ALLOCATION
+  Renewable generation ........ 31%
+  Electric transmission ....... 22%
+  Water utilities ............. 15%
+  Digital infrastructure ...... 14%
+  Low-carbon transport ........ 12%
+  Cash ........................  6%
+
+PERFORMANCE (net of fees, Class A, USD, to 30 June 2026)
+  1 year ...................... 9.7%   (benchmark 11.2%)
+  3 years annualized .......... 5.8%   (benchmark 6.1%)
+  Since inception annualized .. 6.9%   (benchmark 6.4%)
+
+Past performance is not a reliable indicator of future results.

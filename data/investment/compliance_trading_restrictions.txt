@@ -1,0 +1,100 @@
+FICTIONAL SAMPLE DATA - for RAG testing only
+==============================================================
+Title:          Compliance and Trading Restrictions Policy
+Doc ID:         INV-CMP-001
+Version:        3.0
+Effective date: 2025-11-01
+Owner:          Compliance (Chief Compliance Officer: Marcus Feld),
+                Halvorsen Ridge Capital Management LLC
+Status:         Current
+==============================================================
+
+1. PURPOSE AND SCOPE
+
+This policy sets out the rules for personal trading, the restricted list,
+gifts and entertainment, and reporting obligations for all employees of
+Halvorsen Ridge Capital Management LLC ("HRCM"). All employees are treated
+as "access persons" for the purposes of this policy. Contractors with
+access to portfolio holdings or trading systems are also covered.
+
+2. PERSONAL TRADING
+
+2.1 Pre-clearance
+All personal trades in covered securities must be pre-cleared through the
+ClearTrade system before the order is placed. Covered securities include
+listed equities, corporate and municipal bonds, options, futures, ETFs and
+closed-end funds. Open-end mutual funds not managed by HRCM, US Treasury
+securities and money market funds are exempt.
+
+A pre-clearance approval is valid only for the trading day on which it is
+granted and expires at 4:00 PM Eastern Time that day. Orders not executed
+by then require a new pre-clearance request.
+
+2.2 Minimum holding period
+Covered securities must be held for at least 30 calendar days. Profits
+from any sale within 30 days must be disgorged to a charity chosen by
+Compliance, unless the sale was pre-approved for hardship.
+
+2.3 Blackout period
+Employees may not trade a security within 7 calendar days before or after
+any HRCM fund or client account trades that same security. ClearTrade
+rejects requests that fall within the blackout window automatically.
+
+2.4 Initial public offerings and private placements
+Employees may not buy securities in initial public offerings. Private
+placements require written approval from the Chief Compliance Officer.
+
+2.5 Crypto-assets
+Personal holdings of crypto-assets are permitted but must be reported in
+the quarterly holdings report. Crypto-asset exchange-traded products are
+covered securities and require pre-clearance.
+
+2.6 HRCM funds
+Employees investing in HRCM pooled funds must hold their shares for at
+least 90 calendar days. The short-term trading fee in the Fee Schedule
+(INV-FEE-001) also applies to employee investments.
+
+3. RESTRICTED LIST
+
+Compliance maintains a restricted list of issuers about which HRCM may
+hold material non-public information or for which trading is otherwise
+restricted. No employee or fund may trade a security of an issuer on the
+restricted list. The list is confidential and is enforced through
+ClearTrade and the order management system. Employees must notify
+Compliance immediately if they believe they have received material
+non-public information.
+
+4. GIFTS AND ENTERTAINMENT
+
+Employees may not accept gifts with a total value of more than USD 150 per
+calendar year from any single counterparty, broker or vendor. Business
+entertainment (meals, events) where the giver attends is permitted if it
+is not lavish or frequent, and must be logged in the Gifts and
+Entertainment register within 10 business days. Cash and cash equivalents
+(including gift cards) may never be accepted.
+
+5. REPORTING AND CERTIFICATIONS
+
+  Report                         Due
+  -----------------------------  -----------------------------------------
+  Initial holdings report        Within 10 days of joining HRCM
+  Quarterly transactions and     Within 30 calendar days after each
+  holdings report                quarter end
+  Annual code of ethics          By 31 January each year
+  certification
+
+6. VIOLATIONS AND SANCTIONS
+
+  First violation ........ Written warning and retraining
+  Second violation ....... USD 500 fine paid to charity and loss of
+                           personal trading privileges for 90 days
+  Third violation ........ Referral to senior management; may result in
+                           termination of employment
+
+Disgorgement of profits (Section 2.2) applies in addition to the sanctions
+above.
+
+7. CONTACT
+
+Questions should be sent to the Compliance team. Urgent restricted-list
+questions should be directed to the Chief Compliance Officer.
