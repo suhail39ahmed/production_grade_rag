@@ -1,0 +1,22 @@
+# thresholds.yaml: quality gate for CI (read by: python -m src.eval.check_gate).
+# Each metric has a "min" (must be at least) or "max" (must be at most).
+# Set from the full 40-question run on 2026-10-09 (alpha 0.5, MiniLM reranker, qwen2.5:7b),
+# with a small margin. 35 answerable questions -> one question is worth about 0.03.
+# Metrics missing from a report (e.g. faithfulness without --ragas) are skipped unless --strict.
+
+# --- retrieval (measured: 1.00 / 0.94 / 0.99 / 1.00 / 0.90) ---
+hit_at_5:          {min: 0.95}   # right FILE in the final top 5
+recall_at_5:       {min: 0.88}   # share of expected files in top 5 (multi-doc questions need ALL their files)
+recall_at_30:      {min: 0.95}   # right file reaches the reranker at all
+section_hit_at_5:  {min: 0.94}   # right SECTION in the final top 5 (allows 2 misses)
+mrr:               {min: 0.82}   # how high the right section ranks after rerank
+
+# --- generation (measured: 0.975 / 1.00 / 0.143 / 1.00 / 0.60) ---
+citation_valid:            {min: 0.92}   # answers that passed the citation check (no fallback refusal)
+unanswerable_refusal_acc:  {min: 1.0}    # never answer a question the documents can't support
+wrong_refusal_rate:        {max: 0.20}   # "I don't know" on answerable questions (5/35 now; 7/35 fails)
+cited_correct_doc:         {min: 0.95}   # answered questions cite at least one expected file
+number_recall:             {min: 0.50}   # cheap correctness proxy (noisy: only a trend signal)
+
+# --- optional LLM judge, only with --ragas (measured 1.00 on a 5-question subset) ---
+faithfulness:              {min: 0.80}

@@ -1,4 +1,5 @@
 # answer.py: the full RAG pipeline: retrieve -> rerank -> generate -> check citations -> (retry) -> answer.
+# generate() is separate from answer() so the evaluation can reuse the chunks it already retrieved.
 # Run from the repo root:  python -m src.generate.answer "What does ERR-PIPE-4012 mean?"
 
 import os                                        # reads environment variables (settings)
@@ -39,6 +40,7 @@ class Answer:
     attempts: int                                # how many times we called the LLM
     check_errors: list[str] = field(default_factory=list)  # problems found by the checker (all attempts)
     timings: dict = field(default_factory=dict)  # seconds spent in each step
+    fallback: bool = False                       # True if we refused only because every attempt failed the check
 
 
 def get_llm() -> ChatOllama:
@@ -51,20 +53,9 @@ def get_llm() -> ChatOllama:
     )
 
 
-def answer(question: str, retriever: Retriever, llm: ChatOllama | None = None) -> Answer:
-    """Answer one question with citations, or refuse if it can't be done safely."""
-    llm = llm or get_llm()                       # "or" = use the given llm, else make one
-    timings = {}
-
-    t0 = time.perf_counter()
-    candidates = retriever.retrieve(question, k=CANDIDATES)       # step 1: broad hybrid search
-    timings["retrieve"] = time.perf_counter() - t0
-
-    t0 = time.perf_counter()
-    chunks = rerank(question, candidates, top_n=TOP_N)            # step 2: keep the best 5
-    timings["rerank"] = time.perf_counter() - t0
+def generate(question: str, chunks, llm: ChatOllama) -> Answer:
+    """Steps 3-4: ask the LLM using the given chunks, check citations, retry once, else refuse."""
     chunk_texts = [c.text for c in chunks]                        # chunk_texts[0] is source [1]
-
     feedback, all_errors = None, []
     t0 = time.perf_counter()
     for attempt in range(1, MAX_ATTEMPTS + 1):                    # attempt = 1, then 2
@@ -72,17 +63,34 @@ def answer(question: str, retriever: Retriever, llm: ChatOllama | None = None) -
         text = llm.invoke(messages).content.strip()               # step 3: ask the LLM
         result = check_answer(text, chunk_texts, question)        # step 4: check every citation
         if result.passed:                                         # good answer (or an honest refusal): done
-            timings["generate"] = time.perf_counter() - t0
             sources = [                                           # keep only the sources it actually cited
                 Source(n, chunks[n - 1].chunk_id, chunks[n - 1].section, chunks[n - 1].source_file)
                 for n in result.cited
             ]
-            return Answer(text, sources, result.refused, attempt, all_errors, timings)
+            return Answer(text, sources, result.refused, attempt, all_errors,
+                          {"generate": time.perf_counter() - t0})
         all_errors += [f"attempt {attempt}: {e}" for e in result.errors]  # remember what went wrong
         feedback = "\n".join(f"- {e}" for e in result.errors)    # tell the LLM what to fix next time
 
-    timings["generate"] = time.perf_counter() - t0
-    return Answer(REFUSAL, [], True, MAX_ATTEMPTS, all_errors, timings)  # still failing: refuse safely
+    return Answer(REFUSAL, [], True, MAX_ATTEMPTS, all_errors,    # still failing: refuse safely
+                  {"generate": time.perf_counter() - t0}, fallback=True)
+
+
+def answer(question: str, retriever: Retriever, llm: ChatOllama | None = None) -> Answer:
+    """Answer one question with citations, or refuse if it can't be done safely."""
+    llm = llm or get_llm()                       # "or" = use the given llm, else make one
+
+    t0 = time.perf_counter()
+    candidates = retriever.retrieve(question, k=CANDIDATES)       # step 1: broad hybrid search
+    t_retrieve = time.perf_counter() - t0
+
+    t0 = time.perf_counter()
+    chunks = rerank(question, candidates, top_n=TOP_N)            # step 2: keep the best 5
+    t_rerank = time.perf_counter() - t0
+
+    result = generate(question, chunks, llm)                      # steps 3-4
+    result.timings = {"retrieve": t_retrieve, "rerank": t_rerank, **result.timings}  # ** merges the dicts
+    return result
 
 
 def print_answer(a: Answer) -> None:
