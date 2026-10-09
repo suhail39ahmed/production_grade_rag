@@ -15,7 +15,7 @@ DEFAULT_QUERIES = [
 ]
 
 
-def hybrid_search(collection, embedder, query: str, limit: int = 5, alpha: float = 0):
+def hybrid_search(collection, embedder, query: str, limit: int = 5, alpha: float = 0.5):
     """Search with BM25 + vectors combined, skipping superseded documents."""
     query_vector = embedder.embed_query(query)       # embed the question with the same model as the chunks
     return collection.query.hybrid(

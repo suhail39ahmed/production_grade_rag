@@ -54,6 +54,7 @@ desktop.ini
 *.log
 weaviate_data/
 pytest-cache-files-*/
+reports/
 
 # uv / packaging
 uv-cache/
