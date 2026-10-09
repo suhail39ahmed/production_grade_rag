@@ -1,0 +1,237 @@
+# rag-ci.yml: GitHub Actions pipeline for the RAG project.
+#   Job 1 unit-tests : fast pytest run, no services (about 3-5 min with warm caches)
+#   Job 2 eval-gate  : Weaviate + Ollama (bge-m3), index the docs, retrieval-only eval, quality gate (about 8-12 min)
+#   Job 3 full-eval  : nightly / manual only: adds the LLM (qwen2.5) on a small question subset (about 15-30 min)
+# Make "eval-gate" a required status check so a pull request can't merge if retrieval quality drops.
+
+name: rag-ci                                     # the name shown in the Actions tab
+
+on:                                              # WHEN the workflow runs
+  pull_request:                                  # every pull request (opened or updated)
+  push:
+    branches: [main]                             # every push/merge to main
+  workflow_dispatch:                             # a "Run workflow" button in the Actions tab
+    inputs:                                      # options you can pick when running it by hand
+      chat_model:
+        description: "Ollama chat model for full-eval"
+        default: "qwen2.5:7b"
+      eval_types:
+        description: "Question types for full-eval (comma list)"
+        default: "unanswerable,conflict_version"
+  schedule:
+    - cron: "30 21 * * *"                        # nightly at 21:30 UTC = 03:00 IST (cron times are always UTC)
+
+permissions:
+  contents: read                                 # least privilege: the jobs only need to read the code
+
+concurrency:                                     # a new push to the same branch cancels the old, now-useless run
+  group: rag-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:                                             # settings shared by every job
+  PYTHON_VERSION: "3.12"
+  RERANK_MODEL: cross-encoder/ms-marco-MiniLM-L-6-v2   # the small, fast reranker (88 MB)
+  EMBED_MODEL: bge-m3
+  OLLAMA_BASE_URL: http://localhost:11434
+  HF_HUB_DISABLE_TELEMETRY: "1"
+
+jobs:
+  unit-tests:
+    name: unit-tests
+    runs-on: ubuntu-latest                       # GitHub-hosted Linux VM: 4 vCPU, 16 GB RAM
+    timeout-minutes: 20                          # kill the job if it hangs instead of burning minutes
+    steps:
+      - uses: actions/checkout@v7                # download the repo's code
+
+      - uses: astral-sh/setup-uv@v10.2.0         # install uv (setup-uv has no "v10" tag, so pin the full version)
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true                     # reuse downloaded packages between runs (keyed on uv.lock)
+
+      - name: Install dependencies
+        run: uv sync --locked                    # install exactly what uv.lock says; fail if it's out of date
+
+      - name: Cache Hugging Face models          # the reranker test downloads MiniLM once, then reuses it
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ env.RERANK_MODEL }}        # same model name -> same cache
+
+      - name: Run unit tests (no services needed)
+        run: uv run pytest -v
+
+  eval-gate:
+    name: eval-gate
+    needs: unit-tests                            # only start if unit-tests passed
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:                                    # extra containers GitHub starts next to the job
+      weaviate:
+        image: cr.weaviate.io/semitechnologies/weaviate:1.27.27   # same version as docker-compose.yml
+        ports:
+          - 8080:8080                            # HTTP API -> localhost:8080
+          - 50051:50051                          # gRPC API -> localhost:50051 (the v4 client needs both)
+        env:                                     # same settings as docker-compose.yml
+          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+          PERSISTENCE_DATA_PATH: /var/lib/weaviate
+          DEFAULT_VECTORIZER_MODULE: none
+          ENABLE_MODULES: ""
+          CLUSTER_HOSTNAME: node1
+          QUERY_DEFAULTS_LIMIT: "25"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Cache Hugging Face models
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ env.RERANK_MODEL }}
+
+      - name: Cache Ollama models                # bge-m3 is 1.2 GB: download it once, not on every run
+        uses: actions/cache@v6
+        with:
+          path: ~/.ollama/models
+          key: ollama-${{ env.EMBED_MODEL }}-v1  # bump "v1" to force a fresh download
+
+      - name: Install and start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh          # installs the binary (and a system service)
+          sudo systemctl stop ollama || true                     # stop the service: it stores models elsewhere
+          nohup ollama serve > /tmp/ollama.log 2>&1 &            # run as this user -> models in ~/.ollama (cached)
+          for _ in $(seq 1 30); do                               # wait up to 30 s until the API answers
+            curl -sf "$OLLAMA_BASE_URL/api/tags" > /dev/null && break
+            sleep 1
+          done
+          ollama pull "$EMBED_MODEL"                             # fast no-op when the cache was restored
+
+      - name: Wait for Weaviate
+        run: |
+          for _ in $(seq 1 60); do                               # the service container may still be starting
+            curl -sf http://localhost:8080/v1/.well-known/ready && echo "Weaviate ready" && exit 0
+            sleep 2
+          done
+          echo "Weaviate did not become ready" && exit 1
+
+      - name: Index the documents
+        run: uv run python -m src.ingest.indexer --recreate      # fails if object count != chunk count
+
+      - name: Retrieval-only evaluation
+        run: uv run python -m src.eval.run_eval --retrieval-only
+
+      - name: Quality gate (retrieval metrics)
+        run: uv run python -m src.eval.check_gate --only retrieval   # exit code 1 here fails the PR check
+
+      - name: Write job summary
+        if: always()                             # run even if the gate failed, so you can see WHY
+        run: |
+          if [ -f reports/latest.json ]; then
+            uv run python -m src.eval.summary_md --only retrieval --title "Retrieval gate" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: eval-reports-${{ github.run_id }}
+          path: reports/
+          retention-days: 14
+          if-no-files-found: warn
+
+  full-eval:
+    name: full-eval
+    needs: unit-tests
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'   # never on PRs: too slow
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CHAT_MODEL: ${{ inputs.chat_model || 'qwen2.5:7b' }}                     # inputs are empty on schedule
+      EVAL_TYPES: ${{ inputs.eval_types || 'unanswerable,conflict_version' }}
+    services:
+      weaviate:
+        image: cr.weaviate.io/semitechnologies/weaviate:1.27.27
+        ports:
+          - 8080:8080
+          - 50051:50051
+        env:
+          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+          PERSISTENCE_DATA_PATH: /var/lib/weaviate
+          DEFAULT_VECTORIZER_MODULE: none
+          ENABLE_MODULES: ""
+          CLUSTER_HOSTNAME: node1
+          QUERY_DEFAULTS_LIMIT: "25"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Cache Hugging Face models
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ env.RERANK_MODEL }}
+
+      - name: Cache Ollama models                # separate key: bge-m3 + the chat model (about 6 GB for 7b)
+        uses: actions/cache@v6
+        with:
+          path: ~/.ollama/models
+          key: ollama-${{ env.EMBED_MODEL }}-${{ env.CHAT_MODEL }}-v1
+
+      - name: Install and start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl stop ollama || true
+          nohup ollama serve > /tmp/ollama.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -sf "$OLLAMA_BASE_URL/api/tags" > /dev/null && break
+            sleep 1
+          done
+          ollama pull "$EMBED_MODEL"
+          ollama pull "$CHAT_MODEL"
+
+      - name: Wait for Weaviate
+        run: |
+          for _ in $(seq 1 60); do
+            curl -sf http://localhost:8080/v1/.well-known/ready && echo "Weaviate ready" && exit 0
+            sleep 2
+          done
+          echo "Weaviate did not become ready" && exit 1
+
+      - name: Index the documents
+        run: uv run python -m src.ingest.indexer --recreate
+
+      - name: End-to-end evaluation (small subset)
+        run: uv run python -m src.eval.run_eval --types "$EVAL_TYPES"
+
+      - name: Quality gate (generation safety metrics)
+        run: uv run python -m src.eval.check_gate --only retrieval,unanswerable_refusal_acc,citation_valid,wrong_refusal_rate
+
+      - name: Write job summary
+        if: always()
+        run: |
+          if [ -f reports/latest.json ]; then
+            uv run python -m src.eval.summary_md --only retrieval,unanswerable_refusal_acc,citation_valid,wrong_refusal_rate \
+              --title "Full eval ($CHAT_MODEL, $EVAL_TYPES)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: full-eval-reports-${{ github.run_id }}
+          path: reports/
+          retention-days: 30
+          if-no-files-found: warn
