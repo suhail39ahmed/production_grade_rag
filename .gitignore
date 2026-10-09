@@ -1,0 +1,59 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+*.manifest
+*.spec
+
+# Test / coverage / type checkers
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+coverage.xml
+*.cover
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+*.pem
+credentials.json
+secrets.json
+
+# Local / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project local caches / data stores
+.cache/
+*.log
+weaviate_data/
+pytest-cache-files-*/
+
+# uv / packaging
+uv-cache/

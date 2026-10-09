@@ -1,7 +1,7 @@
 [project]
 name = "production-grade-rag"
 version = "0.1.0"
-description = "Add your description here"
+description = "Local production-style RAG: ingest, Weaviate hybrid search, and cross-encoder reranking."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -9,17 +9,23 @@ dependencies = [
     "langchain>=1.4.3",
     "langchain-ollama>=1.1.0",
     "langchain-openai>=1.7.0",
+    "langchain-text-splitters>=1.0.0",
     "pypdf>=6.19.0",
-    "pytest>=9.1.1",
     "python-dotenv>=1.2.4",
     "ragas>=0.4.3",
     "sentence-transformers>=6.1.0",
     "weaviate-client>=4.23.1",
 ]
 
-[project.scripts]
-production-grade-rag = "production_grade_rag:main"
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -2195,12 +2195,17 @@ dependencies = [
     { name = "langchain" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
+    { name = "langchain-text-splitters" },
     { name = "pypdf" },
-    { name = "pytest" },
     { name = "python-dotenv" },
     { name = "ragas" },
     { name = "sentence-transformers" },
     { name = "weaviate-client" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
 ]
 
 [package.metadata]
@@ -2209,13 +2214,16 @@ requires-dist = [
     { name = "langchain", specifier = ">=1.4.3" },
     { name = "langchain-ollama", specifier = ">=1.1.0" },
     { name = "langchain-openai", specifier = ">=1.7.0" },
+    { name = "langchain-text-splitters", specifier = ">=1.0.0" },
     { name = "pypdf", specifier = ">=6.19.0" },
-    { name = "pytest", specifier = ">=9.1.1" },
     { name = "python-dotenv", specifier = ">=1.2.4" },
     { name = "ragas", specifier = ">=0.4.3" },
     { name = "sentence-transformers", specifier = ">=6.1.0" },
     { name = "weaviate-client", specifier = ">=4.23.1" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.1.1" }]
 
 [[package]]
 name = "propcache"
