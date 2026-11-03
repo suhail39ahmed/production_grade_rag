@@ -1,5 +1,7 @@
 # Production-Grade RAG: Ask My Docs
 
+![Production-Grade RAG: hybrid search, reranking and a CI quality gate](docs/cover.jpg)
+
 **Ask questions about your company's documents and get short answers where every sentence cites its source, and an honest "I don't know" when the documents don't say. It runs 100% locally on a CPU laptop and a CI gate blocks quality regressions.**
 
 [![rag-ci](https://github.com/<OWNER>/<REPO>/actions/workflows/rag-ci.yml/badge.svg)](https://github.com/<OWNER>/<REPO>/actions/workflows/rag-ci.yml)
@@ -59,6 +61,35 @@ What makes it "production-grade" rather than a notebook demo:
 - **CI eval gate.** Every pull request re-indexes the corpus and fails if retrieval quality drops below thresholds.
 - **Served properly.** FastAPI (with health checks, validation and warm startup) sits in front of a Streamlit portal.
 - **Private and free.** Everything runs locally (Ollama + Docker), with no API keys and no data leaving the machine.
+
+---
+
+## Design & Engineering
+
+I designed this RAG system around one rule: **a wrong answer is worse than "I don't know"**. Everything else follows from that.
+
+**Design goals**
+
+- Every sentence in an answer cites a source, and numbers must appear in the cited chunk.
+- Refuse honestly when the documents don't answer the question (fail closed).
+- Never answer from superseded policy versions.
+- Run 100% locally on a CPU laptop (privacy, no keys, no cost).
+- Block quality regressions in CI before they merge.
+
+**Where the design lives in this README**
+
+- [Architecture](#architecture): offline ingestion, online answering, serving and the quality loop (Mermaid + PNG).
+- [Request lifecycle](#request-lifecycle-step-by-step): the 10 steps from **Ask** to cited answer.
+- [Tech stack (and why)](#tech-stack-and-why): each layer and the reason I picked it.
+- [Design decisions and trade-offs](#design-decisions-and-trade-offs): hybrid search, rerank 30 → 5, superseded filter, citation checks in code, retry-then-refuse, chunking, tokenization, deterministic ids.
+- [CI: the quality gate](#ci-the-quality-gate): `unit-tests` and `eval-gate` on every PR, `full-eval` nightly.
+- [Known limitations](#known-limitations) and [Roadmap](#roadmap): what I'd do next.
+
+**Engineering at a glance**
+
+- **Stack:** Python 3.12 + uv, Weaviate 1.27.27 (hybrid BM25 + vectors), bge-m3 embeddings and qwen2.5:7b via Ollama, cross-encoder reranker, FastAPI + Streamlit.
+- **Testing and evals:** 41 pytest tests that need no Weaviate or Ollama; a 40-question golden set with retrieval, refusal and citation metrics, plus Ragas faithfulness.
+- **CI:** GitHub Actions with Weaviate as a service container and thresholds in `thresholds.yaml`.
 
 ---
 
